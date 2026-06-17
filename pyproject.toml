@@ -17,8 +17,10 @@ notebook = [
 ]
 serve = [
     "fastapi>=0.115.0",
-    "torch>=2.1.0",
     "uvicorn[standard]>=0.30.0",
+    # Installs Intel Mac compatible version, otherwise pulls standard >=2.1.0
+    "torch==2.2.2; sys_platform == 'darwin' and platform_machine == 'x86_64'",
+    "torch>=2.1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
 ]
 
 [tool.uv]
