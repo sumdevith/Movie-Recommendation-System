@@ -67,6 +67,15 @@ uv run python main.py \
 
 Both the notebook and CLI expect `data/ratings.dat` to exist before running.
 
+### FastAPI UI
+
+```bash
+uv run --group serve uvicorn app:app --reload
+```
+
+Then open `http://127.0.0.1:8000`. The server loads `model_for_streamlit.pt`
+and serves the UI from `templates/index.html` with styles from `static/styles.css`.
+
 ---
 
 ## Architecture: NCFModel (pure MLP)

@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MovieLens Recommender</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="panel">
+        <div>
+          <p class="eyebrow">NCF MovieLens 1M</p>
+          <h1>Movie recommendations</h1>
+        </div>
+
+        <form id="recommend-form" class="controls">
+          <label>
+            User ID
+            <input id="user-id" type="number" min="1" max="6040" value="1" required />
+          </label>
+
+          <label>
+            Results
+            <input id="top-k" type="number" min="1" max="50" value="10" required />
+          </label>
+
+          <button type="submit">Recommend</button>
+        </form>
+
+        <p id="status" class="status">Enter a MovieLens user ID from 1 to 6040.</p>
+      </section>
+
+      <section class="results" aria-live="polite">
+        <div id="cards" class="cards"></div>
+      </section>
+    </main>
+
+    <script>
+      const form = document.querySelector("#recommend-form");
+      const statusEl = document.querySelector("#status");
+      const cardsEl = document.querySelector("#cards");
+
+      function renderCards(items) {
+        cardsEl.innerHTML = "";
+        for (const item of items) {
+          const card = document.createElement("article");
+          card.className = "card";
+          card.innerHTML = `
+            <div>
+              <h2>${item.title}</h2>
+              <p>${item.genres}</p>
+            </div>
+            <strong>${item.predicted_rating.toFixed(3)}</strong>
+          `;
+          cardsEl.appendChild(card);
+        }
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const userId = document.querySelector("#user-id").value;
+        const topK = document.querySelector("#top-k").value;
+
+        statusEl.textContent = "Loading recommendations...";
+        cardsEl.innerHTML = "";
+
+        try {
+          const response = await fetch(`/api/recommendations?user_id=${userId}&top_k=${topK}`);
+          const payload = await response.json();
+
+          if (!response.ok) {
+            throw new Error(payload.detail || "Failed to load recommendations.");
+          }
+
+          renderCards(payload.recommendations);
+          statusEl.textContent = `Top ${payload.recommendations.length} recommendations for user ${payload.user_id}.`;
+        } catch (error) {
+          statusEl.textContent = error.message;
+        }
+      });
+    </script>
+  </body>
+</html>

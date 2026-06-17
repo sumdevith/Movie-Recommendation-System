@@ -1,0 +1,145 @@
+:root {
+  color-scheme: light;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f6f7f9;
+  color: #17202a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.shell {
+  width: min(1100px, calc(100% - 32px));
+  margin: 40px auto;
+}
+
+.panel {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 24px;
+  align-items: end;
+  padding: 28px;
+  background: #ffffff;
+  border: 1px solid #e3e7ec;
+  border-radius: 8px;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: #5c6b7a;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 0;
+  font-size: 34px;
+  line-height: 1.1;
+}
+
+.controls {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+}
+
+label {
+  display: grid;
+  gap: 6px;
+  color: #405060;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+input {
+  width: 120px;
+  padding: 10px 12px;
+  border: 1px solid #cbd3dc;
+  border-radius: 6px;
+  font: inherit;
+}
+
+button {
+  min-height: 42px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 6px;
+  background: #2563eb;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #1d4ed8;
+}
+
+.status {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #5c6b7a;
+}
+
+.results {
+  margin-top: 22px;
+}
+
+.cards {
+  display: grid;
+  gap: 12px;
+}
+
+.card {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 20px;
+  background: #ffffff;
+  border: 1px solid #e3e7ec;
+  border-radius: 8px;
+}
+
+.card h2 {
+  margin: 0 0 6px;
+  font-size: 17px;
+}
+
+.card p {
+  margin: 0;
+  color: #5c6b7a;
+}
+
+.card strong {
+  align-self: center;
+  min-width: 72px;
+  color: #0f766e;
+  font-size: 20px;
+  text-align: right;
+}
+
+@media (max-width: 760px) {
+  .panel,
+  .controls {
+    display: grid;
+  }
+
+  input,
+  button {
+    width: 100%;
+  }
+
+  .card {
+    display: grid;
+  }
+
+  .card strong {
+    text-align: left;
+  }
+}
