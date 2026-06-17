@@ -3,69 +3,101 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>MovieLens Recommender</title>
-    <link rel="stylesheet" href="/static/styles.css" />
+    <meta name="theme-color" content="#13343B" />
+    <title>The Box Office · MovieLens Recommender</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=DM+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/styles.css?v=2" />
   </head>
   <body>
-    <main class="shell">
-      <section class="panel">
-        <div class="intro">
-          <p class="eyebrow">Demographic + Genre Recommender</p>
-          <h1>Find movies for your profile</h1>
-          <p class="lede">
-            Tell us who you are and which genres you like — we predict the movies
-            you'd rate highest.
-          </p>
+    <div class="house-lights" aria-hidden="true"></div>
+
+    <main class="lobby">
+      <header class="marquee">
+        <p class="eyebrow">The Box Office</p>
+        <h1 class="marquee-title">Now showing,<br /><em>just for you</em></h1>
+        <p class="lede">
+          Step up to the window. Tell us who's watching and what you're in the
+          mood for — we'll print the films you're most likely to love.
+        </p>
+      </header>
+
+      <section class="window" aria-label="Box office window">
+        <div class="window-head">
+          <span class="window-tag">Box Office</span>
+          <span class="window-status" id="window-status">Admit one profile</span>
         </div>
 
-        <form id="recommend-form" class="controls">
-          <label>
-            Gender
-            <select id="gender" required></select>
-          </label>
+        <form id="recommend-form" novalidate>
+          <div class="grid">
+            <label class="field">
+              <span class="field-label">Who's watching</span>
+              <div class="select-wrap"><select id="gender" required></select></div>
+            </label>
 
-          <label>
-            Age
-            <select id="age" required></select>
-          </label>
+            <label class="field">
+              <span class="field-label">Age</span>
+              <div class="select-wrap"><select id="age" required></select></div>
+            </label>
 
-          <label>
-            Occupation
-            <select id="occupation" required></select>
-          </label>
+            <label class="field field-wide">
+              <span class="field-label">Occupation</span>
+              <div class="select-wrap"><select id="occupation" required></select></div>
+            </label>
 
-          <label>
-            Zip-code
-            <input id="zip-code" type="text" inputmode="numeric" value="55105" required />
-          </label>
+            <label class="field">
+              <span class="field-label">Zip code</span>
+              <input id="zip-code" type="text" inputmode="numeric" placeholder="55105" value="55105" required />
+            </label>
 
-          <label>
-            Results
-            <input id="top-n" type="number" min="1" max="50" value="10" required />
-          </label>
+            <label class="field">
+              <span class="field-label">Tickets</span>
+              <div class="stepper">
+                <button type="button" data-step="-1" aria-label="Fewer tickets">–</button>
+                <input id="top-n" type="number" min="1" max="50" value="10" required />
+                <button type="button" data-step="1" aria-label="More tickets">+</button>
+              </div>
+            </label>
+          </div>
+
+          <div class="mood">
+            <div class="mood-head">
+              <span class="field-label">In the mood for</span>
+              <span class="counter"><span id="genre-count">0</span> / 3</span>
+            </div>
+            <div id="genre-list" class="genre-list"></div>
+          </div>
+
+          <div class="actions">
+            <button type="submit" class="print-btn" id="submit-btn">
+              <span class="print-label">Print my tickets</span>
+            </button>
+            <p id="status" class="status">Build your profile, then pick 1–3 genres.</p>
+          </div>
         </form>
-
-        <fieldset class="genres">
-          <legend>Pick 1–3 genres</legend>
-          <div id="genre-list" class="genre-list"></div>
-        </fieldset>
-
-        <div class="actions">
-          <button type="submit" form="recommend-form">Recommend</button>
-          <p id="status" class="status">Fill in your profile and choose up to 3 genres.</p>
-        </div>
       </section>
 
       <section class="results" aria-live="polite">
-        <div id="cards" class="cards"></div>
+        <div class="empty" id="empty-state">
+          <div class="empty-perf"></div>
+          <p>Your tickets print here.</p>
+        </div>
+        <div id="tickets" class="tickets"></div>
       </section>
     </main>
 
     <script>
       const form = document.querySelector("#recommend-form");
       const statusEl = document.querySelector("#status");
-      const cardsEl = document.querySelector("#cards");
+      const ticketsEl = document.querySelector("#tickets");
       const genreListEl = document.querySelector("#genre-list");
+      const genreCountEl = document.querySelector("#genre-count");
+      const submitBtn = document.querySelector("#submit-btn");
+      const emptyState = document.querySelector("#empty-state");
       const MAX_GENRES = 3;
 
       function fillSelect(id, items) {
@@ -83,12 +115,21 @@
         return [...genreListEl.querySelectorAll("input:checked")].map((el) => el.value);
       }
 
-      function enforceGenreLimit() {
+      function refreshGenreState() {
         const checked = genreListEl.querySelectorAll("input:checked");
+        genreCountEl.textContent = checked.length;
         const atLimit = checked.length >= MAX_GENRES;
         for (const el of genreListEl.querySelectorAll("input")) {
           el.disabled = atLimit && !el.checked;
         }
+      }
+
+      function setLoading(isLoading) {
+        submitBtn.classList.toggle("is-printing", isLoading);
+        submitBtn.disabled = isLoading;
+        submitBtn.querySelector(".print-label").textContent = isLoading
+          ? "Printing…"
+          : "Print my tickets";
       }
 
       async function loadOptions() {
@@ -101,48 +142,111 @@
         genreListEl.innerHTML = "";
         for (const genre of data.genres) {
           const label = document.createElement("label");
-          label.className = "chip";
-          label.innerHTML = `<input type="checkbox" value="${genre}" /> ${genre}`;
+          label.className = "tag";
+          label.innerHTML = `<input type="checkbox" value="${genre}" /><span class="tag-text">${genre}</span>`;
           genreListEl.appendChild(label);
         }
-        genreListEl.addEventListener("change", enforceGenreLimit);
+        genreListEl.addEventListener("change", refreshGenreState);
+        refreshGenreState();
       }
 
-      function renderCards(items) {
-        cardsEl.innerHTML = "";
-        for (const item of items) {
-          const card = document.createElement("article");
-          card.className = "card";
-          card.innerHTML = `
-            <div>
-              <h2>${item.title}</h2>
-              <p>${item.genres}</p>
-            </div>
-            <strong>${item.predicted_rating.toFixed(2)}</strong>
-          `;
-          cardsEl.appendChild(card);
+      async function checkHealth() {
+        const el = document.querySelector("#window-status");
+        try {
+          const res = await fetch("/api/health");
+          const data = await res.json();
+          el.textContent = data.model_loaded
+            ? `Open · ${Number(data.movies).toLocaleString()} films`
+            : "Closed · model not trained yet";
+          el.classList.toggle("is-closed", !data.model_loaded);
+        } catch {
+          el.textContent = "Closed · server offline";
+          el.classList.add("is-closed");
         }
       }
+
+      function stars(rating) {
+        const pct = Math.max(0, Math.min(100, (rating / 5) * 100));
+        return `<span class="stars" style="--pct:${pct}%"><i></i></span>`;
+      }
+
+      function genreLine(genresStr) {
+        return genresStr.split("|").map((g) => g.trim()).join(" · ");
+      }
+
+      function showPrinting(n) {
+        emptyState.style.display = "none";
+        ticketsEl.innerHTML = "";
+        for (let i = 0; i < n; i++) {
+          const sk = document.createElement("div");
+          sk.className = "ticket is-skeleton";
+          sk.style.setProperty("--i", i);
+          sk.innerHTML = `<div class="stub"></div><div class="ticket-main"><span class="sk w70"></span><span class="sk w40"></span></div>`;
+          ticketsEl.appendChild(sk);
+        }
+      }
+
+      function renderTickets(items) {
+        emptyState.style.display = "none";
+        ticketsEl.innerHTML = "";
+        if (!items.length) {
+          emptyState.style.display = "";
+          emptyState.querySelector("p").textContent = "No films matched those genres.";
+          return;
+        }
+        items.forEach((item, i) => {
+          const no = String(i + 1).padStart(2, "0");
+          const ticket = document.createElement("article");
+          ticket.className = "ticket reveal";
+          ticket.style.setProperty("--i", i);
+          ticket.innerHTML = `
+            <div class="stub">
+              <span class="stub-admit">Admit<br />One</span>
+              <span class="stub-no">No.${no}</span>
+            </div>
+            <div class="ticket-main">
+              <h3 class="film">${item.title}</h3>
+              <p class="film-genres">${genreLine(item.genres)}</p>
+            </div>
+            <div class="ticket-score">
+              ${stars(item.predicted_rating)}
+              <span class="score"><b>${item.predicted_rating.toFixed(1)}</b><small>/5 predicted</small></span>
+            </div>`;
+          ticketsEl.appendChild(ticket);
+        });
+      }
+
+      document.querySelectorAll(".stepper button").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const input = document.querySelector("#top-n");
+          const next = Number(input.value) + Number(btn.dataset.step);
+          input.value = Math.max(1, Math.min(50, next));
+        });
+      });
 
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
         const genres = selectedGenres();
         if (genres.length < 1) {
-          statusEl.textContent = "Please choose at least one genre.";
+          statusEl.textContent = "Pick at least one genre to print tickets.";
+          statusEl.classList.add("error");
           return;
         }
+        statusEl.classList.remove("error");
 
+        const topN = Number(document.querySelector("#top-n").value);
         const payload = {
           gender: document.querySelector("#gender").value,
           age: Number(document.querySelector("#age").value),
           occupation: Number(document.querySelector("#occupation").value),
           zip_code: document.querySelector("#zip-code").value,
           genres,
-          top_n: Number(document.querySelector("#top-n").value),
+          top_n: topN,
         };
 
-        statusEl.textContent = "Loading recommendations...";
-        cardsEl.innerHTML = "";
+        setLoading(true);
+        statusEl.textContent = "Scoring the catalogue…";
+        showPrinting(Math.min(topN, 6));
 
         try {
           const res = await fetch("/api/recommend", {
@@ -151,19 +255,26 @@
             body: JSON.stringify(payload),
           });
           const data = await res.json();
-          if (!res.ok) {
-            throw new Error(data.detail || "Failed to load recommendations.");
-          }
-          renderCards(data.recommendations);
-          statusEl.textContent = `Top ${data.recommendations.length} ${genres.join(", ")} picks for a ${data.profile.age} ${data.profile.occupation}.`;
+          if (!res.ok) throw new Error(data.detail || "Couldn't print tickets.");
+          renderTickets(data.recommendations);
+          const p = data.profile;
+          statusEl.textContent = `Printed ${data.recommendations.length} ${genres.join(" · ")} tickets for a ${p.age} ${p.occupation}.`;
         } catch (error) {
-          statusEl.textContent = error.message;
+          ticketsEl.innerHTML = "";
+          emptyState.style.display = "";
+          emptyState.querySelector("p").textContent = error.message;
+          statusEl.textContent = "The window is closed for now.";
+          statusEl.classList.add("error");
+        } finally {
+          setLoading(false);
         }
       });
 
       loadOptions().catch(() => {
-        statusEl.textContent = "Could not load form options. Is the server running?";
+        statusEl.textContent = "Couldn't load the window. Is the server running?";
+        statusEl.classList.add("error");
       });
+      checkHealth();
     </script>
   </body>
 </html>
