@@ -2,5 +2,4 @@
 .uv-cache
 __pycache__/
 demo.py
-data/
 run_ncf.sh
