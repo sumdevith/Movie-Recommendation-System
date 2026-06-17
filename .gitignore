@@ -1,4 +1,6 @@
 .venv
+.uv-cache
+__pycache__/
 demo.py
-data
+data/
 run_ncf.sh

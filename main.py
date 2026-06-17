@@ -6,7 +6,7 @@ Entry point that wires all four sections together into a single runnable
 pipeline.
 
 Usage (from the project root):
-    python main.py --data_path data/ratings.dat
+    uv run python main.py --data_path data/ratings.dat
 
 All configurable hyper-parameters can be set via CLI flags; sensible
 defaults are provided for a local development run on any laptop.
