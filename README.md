@@ -22,6 +22,7 @@ ncf_recommender/
 |-- section4_evaluation.py           # PyTorch + Spark evaluation (RMSE, MSE, MAE)
 |-- main.py                          # End-to-end CLI entry point
 |-- ncf_movielens.ipynb              # Jupyter Notebook version
+|-- movielens_visualization.ipynb    # Local visualization-only notebook
 |-- pyproject.toml
 `-- data/                            # ratings.dat placed here
 ```
@@ -38,11 +39,11 @@ ncf_recommender/
 uv sync --group notebook
 
 # 3. Open the notebook
-uv run jupyter lab ncf_movielens.ipynb
+uv run --group notebook jupyter lab movielens_visualization.ipynb
 ```
 
-The notebook expects the manually extracted MovieLens 1M ratings file at
-`data/ratings.dat`.
+The visualization notebook expects the manually extracted MovieLens 1M files at
+`data/ratings.dat`, `data/movies.dat`, and `data/users.dat`.
 
 ### CLI
 
