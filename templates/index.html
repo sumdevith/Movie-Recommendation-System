@@ -9,26 +9,51 @@
   <body>
     <main class="shell">
       <section class="panel">
-        <div>
-          <p class="eyebrow">NCF MovieLens 1M</p>
-          <h1>Movie recommendations</h1>
+        <div class="intro">
+          <p class="eyebrow">Demographic + Genre Recommender</p>
+          <h1>Find movies for your profile</h1>
+          <p class="lede">
+            Tell us who you are and which genres you like — we predict the movies
+            you'd rate highest.
+          </p>
         </div>
 
         <form id="recommend-form" class="controls">
           <label>
-            User ID
-            <input id="user-id" type="number" min="1" max="6040" value="1" required />
+            Gender
+            <select id="gender" required></select>
+          </label>
+
+          <label>
+            Age
+            <select id="age" required></select>
+          </label>
+
+          <label>
+            Occupation
+            <select id="occupation" required></select>
+          </label>
+
+          <label>
+            Zip-code
+            <input id="zip-code" type="text" inputmode="numeric" value="55105" required />
           </label>
 
           <label>
             Results
-            <input id="top-k" type="number" min="1" max="50" value="10" required />
+            <input id="top-n" type="number" min="1" max="50" value="10" required />
           </label>
-
-          <button type="submit">Recommend</button>
         </form>
 
-        <p id="status" class="status">Enter a MovieLens user ID from 1 to 6040.</p>
+        <fieldset class="genres">
+          <legend>Pick 1–3 genres</legend>
+          <div id="genre-list" class="genre-list"></div>
+        </fieldset>
+
+        <div class="actions">
+          <button type="submit" form="recommend-form">Recommend</button>
+          <p id="status" class="status">Fill in your profile and choose up to 3 genres.</p>
+        </div>
       </section>
 
       <section class="results" aria-live="polite">
@@ -40,6 +65,48 @@
       const form = document.querySelector("#recommend-form");
       const statusEl = document.querySelector("#status");
       const cardsEl = document.querySelector("#cards");
+      const genreListEl = document.querySelector("#genre-list");
+      const MAX_GENRES = 3;
+
+      function fillSelect(id, items) {
+        const select = document.querySelector(id);
+        select.innerHTML = "";
+        for (const item of items) {
+          const option = document.createElement("option");
+          option.value = item.value;
+          option.textContent = item.label;
+          select.appendChild(option);
+        }
+      }
+
+      function selectedGenres() {
+        return [...genreListEl.querySelectorAll("input:checked")].map((el) => el.value);
+      }
+
+      function enforceGenreLimit() {
+        const checked = genreListEl.querySelectorAll("input:checked");
+        const atLimit = checked.length >= MAX_GENRES;
+        for (const el of genreListEl.querySelectorAll("input")) {
+          el.disabled = atLimit && !el.checked;
+        }
+      }
+
+      async function loadOptions() {
+        const res = await fetch("/api/options");
+        const data = await res.json();
+        fillSelect("#gender", data.genders);
+        fillSelect("#age", data.ages);
+        fillSelect("#occupation", data.occupations);
+
+        genreListEl.innerHTML = "";
+        for (const genre of data.genres) {
+          const label = document.createElement("label");
+          label.className = "chip";
+          label.innerHTML = `<input type="checkbox" value="${genre}" /> ${genre}`;
+          genreListEl.appendChild(label);
+        }
+        genreListEl.addEventListener("change", enforceGenreLimit);
+      }
 
       function renderCards(items) {
         cardsEl.innerHTML = "";
@@ -51,7 +118,7 @@
               <h2>${item.title}</h2>
               <p>${item.genres}</p>
             </div>
-            <strong>${item.predicted_rating.toFixed(3)}</strong>
+            <strong>${item.predicted_rating.toFixed(2)}</strong>
           `;
           cardsEl.appendChild(card);
         }
@@ -59,25 +126,43 @@
 
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
-        const userId = document.querySelector("#user-id").value;
-        const topK = document.querySelector("#top-k").value;
+        const genres = selectedGenres();
+        if (genres.length < 1) {
+          statusEl.textContent = "Please choose at least one genre.";
+          return;
+        }
+
+        const payload = {
+          gender: document.querySelector("#gender").value,
+          age: Number(document.querySelector("#age").value),
+          occupation: Number(document.querySelector("#occupation").value),
+          zip_code: document.querySelector("#zip-code").value,
+          genres,
+          top_n: Number(document.querySelector("#top-n").value),
+        };
 
         statusEl.textContent = "Loading recommendations...";
         cardsEl.innerHTML = "";
 
         try {
-          const response = await fetch(`/api/recommendations?user_id=${userId}&top_k=${topK}`);
-          const payload = await response.json();
-
-          if (!response.ok) {
-            throw new Error(payload.detail || "Failed to load recommendations.");
+          const res = await fetch("/api/recommend", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data.detail || "Failed to load recommendations.");
           }
-
-          renderCards(payload.recommendations);
-          statusEl.textContent = `Top ${payload.recommendations.length} recommendations for user ${payload.user_id}.`;
+          renderCards(data.recommendations);
+          statusEl.textContent = `Top ${data.recommendations.length} ${genres.join(", ")} picks for a ${data.profile.age} ${data.profile.occupation}.`;
         } catch (error) {
           statusEl.textContent = error.message;
         }
+      });
+
+      loadOptions().catch(() => {
+        statusEl.textContent = "Could not load form options. Is the server running?";
       });
     </script>
   </body>

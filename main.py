@@ -6,7 +6,7 @@ Entry point that wires all four sections together into a single runnable
 pipeline.
 
 Usage (from the project root):
-    uv run python main.py --data_path data/ratings.dat
+    uv run python main.py --data_dir data
 
 All configurable hyper-parameters can be set via CLI flags; sensible
 defaults are provided for a local development run on any laptop.
@@ -36,13 +36,13 @@ from section4_evaluation         import run_evaluation
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="End-to-End Distributed NCF Recommender System — MovieLens 1M"
+        description="End-to-End Distributed Demographic+Genre Recommender — MovieLens 1M"
     )
 
     # Data
     parser.add_argument(
-        "--data_path", type=str, default="data/ratings.dat",
-        help="Path to MovieLens 1M ratings.dat file"
+        "--data_dir", type=str, default="data",
+        help="Directory containing ratings.dat, users.dat and movies.dat"
     )
 
     # Model
@@ -51,10 +51,10 @@ def parse_args() -> argparse.Namespace:
         choices=["ncf", "neumf"],
         help="Model architecture: 'ncf' (pure MLP) or 'neumf' (GMF + MLP)"
     )
-    parser.add_argument("--embed_dim",    type=int,   default=64,
-                        help="Embedding dimension")
+    parser.add_argument("--embed_dim",    type=int,   default=32,
+                        help="Shared embedding dimension for the feature towers")
     parser.add_argument("--hidden_dims",  type=int,   nargs="+",
-                        default=[256, 128, 64],
+                        default=[128, 64],
                         help="MLP hidden layer sizes (space-separated)")
     parser.add_argument("--dropout",      type=float, default=0.3,
                         help="Dropout probability")
@@ -119,15 +119,14 @@ def main():
     print("─" * 65)
 
     pipeline = build_pipeline(
-        data_path  = args.data_path,
+        data_dir   = args.data_dir,
         batch_size = args.batch_size,
     )
 
     spark        = pipeline["spark"]
     train_loader = pipeline["train_loader"]
     test_loader  = pipeline["test_loader"]
-    num_users    = pipeline["num_users"]
-    num_movies   = pipeline["num_movies"]
+    feature_dims = pipeline["feature_dims"]
     train_df     = pipeline["train_df"]
     test_df      = pipeline["test_df"]
 
@@ -142,17 +141,19 @@ def main():
 
     # Quick sanity-check forward pass
     sample_model = build_model(
-        model_type  = args.model_type,
-        num_users   = num_users,
-        num_movies  = num_movies,
-        embed_dim   = args.embed_dim,
-        hidden_dims = args.hidden_dims,
-        dropout     = args.dropout,
+        model_type   = args.model_type,
+        feature_dims = feature_dims,
+        embed_dim    = args.embed_dim,
+        hidden_dims  = args.hidden_dims,
+        dropout      = args.dropout,
     ).to(device)
 
-    dummy_u = torch.zeros(4, dtype=torch.long, device=device)
-    dummy_m = torch.zeros(4, dtype=torch.long, device=device)
-    dummy_p = sample_model(dummy_u, dummy_m)
+    dummy_g  = torch.zeros(4, dtype=torch.long, device=device)
+    dummy_a  = torch.zeros(4, dtype=torch.long, device=device)
+    dummy_o  = torch.zeros(4, dtype=torch.long, device=device)
+    dummy_z  = torch.zeros(4, dtype=torch.long, device=device)
+    dummy_ge = torch.zeros(4, feature_dims["num_genres"], dtype=torch.float32, device=device)
+    dummy_p  = sample_model(dummy_g, dummy_a, dummy_o, dummy_z, dummy_ge)
     print(f"[Model] Sanity check forward pass → output shape: {tuple(dummy_p.shape)}  "
           f"values: {dummy_p.detach().cpu().numpy()}")
     del sample_model   # free memory before distributed launch
@@ -166,8 +167,7 @@ def main():
 
     train_result = launch_distributed_training(
         train_loader    = train_loader,
-        num_users       = num_users,
-        num_movies      = num_movies,
+        feature_dims    = feature_dims,
         num_workers     = args.num_workers,
         use_gpu         = args.use_gpu,
         # Model kwargs
@@ -205,8 +205,7 @@ def main():
     # ----------------------------------------------------------------
     output = {
         "config": vars(args),
-        "num_users":   num_users,
-        "num_movies":  num_movies,
+        "feature_dims": feature_dims,
         "epoch_losses": train_result.get("epoch_losses", []),
         "evaluation":   eval_results,
     }
